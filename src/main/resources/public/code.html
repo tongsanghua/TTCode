@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html xmlns:v-bind="http://www.w3.org/1999/xhtml" xmlns:v-slot="http://www.w3.org/1999/XSL/Transform">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>代码生成小程序</title>
+    <link rel="stylesheet" href="/antd.1.6.5.min.css">
+    <link rel="stylesheet" href="/codemirror.css">
+    <link rel="stylesheet" href="/theme/ayu-dark.css">
+    <link rel="stylesheet" href="/addon/hint/show-hint.css"/>
+    <style>
+        #root {
+            padding: 20px;
+        }
+
+        .ant-card-body {
+            padding: 10px 24px;
+        }
+        .ant-popover{
+            width: 400px;
+        }
+    </style>
+</head>
+<body>
+<div id="root">
+    <div style="margin-bottom: 60px">
+        <a-card title="建表语句">
+            <div style="margin-bottom: 10px">
+                <a-button :disabled="sqlValue===''" type="primary" @click="formatCode">
+                    格式化
+                </a-button>
+                <a-popover placement="bottom">
+                    <template v-slot:content>
+                        <p>CREATE TABLE `sys_user` (
+                            `id` int(11) NOT NULL AUTO_INCREMENT,
+                            `username` varchar(50) NOT NULL DEFAULT '' COMMENT '用户名',
+                            `name` varchar(50) NOT NULL DEFAULT '' COMMENT '姓名',
+                            `email` varchar(50) NOT NULL DEFAULT '' COMMENT '邮箱',
+                            `password` varchar(100) NOT NULL DEFAULT '' COMMENT '密码',
+                            `mobile` varchar(11) NOT NULL DEFAULT '' COMMENT '手机号',
+                            `sex` tinyint(1) NOT NULL DEFAULT '0' COMMENT '性别 1.男 2.女',
+                            `birth` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '出身日期',
+                            `image` varchar(1000) NOT NULL DEFAULT '' COMMENT '头像',
+                            `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '可用状态 1.可用 2.不可用',
+                            `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                            `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '修改时间',
+                            PRIMARY KEY (`id`) USING BTREE
+                            ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;</p>
+                    </template>
+                    <a-button type="link">
+                        示例
+                    </a-button>
+                </a-popover>
+
+            </div>
+            <div>
+                <textarea id="code"></textarea>
+                <p style="color: red;white-space: pre-wrap;">{{sqlError}}</p>
+            </div>
+        </a-card>
+    </div>
+
+    <div style="margin-bottom: 60px">
+        <a-card title="模板变量">
+            <div style="margin-bottom: 10px">
+                <a-button type="primary" size="small" @click="addVariable">添加</a-button>
+            </div>
+            <div style="display: flex;flex-wrap: wrap;min-height: 200px">
+                <div v-for="(item,index) in customerVariable" style="margin: 5px 10px">
+                    <a-input-group compact>
+                        <a-input style="width: 150px" v-model:value="item.variableName"></a-input>
+                        <a-button style="width:20px">:</a-button>
+                        <a-input style="width: 150px" v-model:value="item.variableValue"></a-input>
+                        <a-button type="danger" @click="deleteVariable(index)">删除</a-button>
+                    </a-input-group>
+                </div>
+            </div>
+        </a-card>
+    </div>
+
+    <div style="margin-bottom: 60px">
+        <a-card title="模板">
+            <div style="margin-bottom: 10px">
+                <a-button type="primary" @click="addTemplate">
+                    {{modalShow?'返回':'添加'}}
+                </a-button>
+                <a-divider type="vertical"></a-divider>
+                <a-radio-group v-model:value="templateType" @change="onChange" v-if="!modalShow">
+                    <a-radio-button value="default">
+                        默认模板
+                    </a-radio-button>
+                    <a-radio-button value="custom">
+                        自定义模板
+                    </a-radio-button>
+                </a-radio-group>
+                <a-button :loading="submitLoading" type="primary" @click="submit" v-if="modalShow">
+                    提交
+                </a-button>
+            </div>
+            <div class="data" style="display: flex;flex-wrap: wrap" v-show="!modalShow">
+                <a-card v-for="template in templateData" hoverable style="width: 230px;margin: 10px;position: relative">
+                    <a-checkbox style="position: absolute" :checked="!!template.selected"
+                                @change="templateSelect(template)"></a-checkbox>
+                    <div style="display: flex;flex-direction: column" @click="templateSelect(template)">
+                        <p style="text-align: center;font-size: 18px;font-weight: 900;">{{template.templateName}}</p>
+                        <p style="text-align: center;">{{template.fileType}}</p>
+                    </div>
+                    <template class="ant-card-actions" v-slot:actions>
+                        <a-button type="link" @click="edit(template)">查看</a-button>
+                        <!--                    <a-button type="link" :disabled="sqlValue===''">预览</a-button>-->
+                        <a-button type="link" @click="remove(template)"><span style="color: red">删除</span></a-button>
+                    </template>
+                </a-card>
+            </div>
+            <div class="edit" v-bind:style="{opacity:modalShow?1:0,position:modalShow?'relative':'fixed'}"
+                 style="display: flex">
+                <div style="flex: 1;padding: 5px">
+                    <a-form layout="vertical" :form="templateForm">
+                        <a-form-item label="模板名称">
+                            <a-input v-model:value="templateForm.name"/>
+                        </a-form-item>
+                        <a-form-item label="文件类型">
+                            <a-select v-model:value="templateForm.fileType" style="width: 100%">
+                                <a-select-option v-for="item in fileTypeData" :value="item">
+                                    {{item}}
+                                </a-select-option>
+                            </a-select>
+                            </a-select>
+                        </a-form-item>
+                        <a-form-item label="模板内容">
+                            <textarea id="template"></textarea>
+                        </a-form-item>
+                        <a-form-item label="预览">
+                            <textarea id="preview"></textarea>
+                        </a-form-item>
+                    </a-form>
+                </div>
+            </div>
+        </a-card>
+
+    </div>
+    <a-button style="position: fixed;right: 100px;top: 50%;height: 64px;width: 64px" type="primary" shape="circle"
+              size="large" @click="generate" :disabled="sqlValue===''">
+        生成
+    </a-button>
+
+</div>
+</body>
+
+<script src="/vue.2.6.12.min.js"></script>
+<script src="/antd.1.6.5.min.js"></script>
+<script src="/codemirror.js"></script>
+<script src="/sql-formatter.min.js"></script>
+<script src="/addon/edit/matchbrackets.js"></script>
+<script src="/mode/sql/sql.js"></script>
+<script src="/mode/velocity/velocity.js"></script>
+<script src="/mode/clike/clike.js"></script>
+<script src="/mode/xml/xml.js"></script>
+
+<script>
+    const modeMap = {
+        java: 'text/x-java',
+        sql: 'text/x-mysql',
+        xml: 'text/html',
+        vue: 'vue',
+        js: 'jsx',
+        jsx: 'jsx'
+    }
+    let codeEditor = null
+    let templateCodeEditor = null
+    let previewCodeEditor = null
+    const app = Vue.createApp({
+        data() {
+            return {
+                sqlError: '',
+                sqlValue: '',
+                defaultTemplateData: [],
+                customTemplateData: [],
+                fileTypeData: [],
+                modalShow: false,
+                submitLoading: false,
+                templateType: 'default',
+                customerVariable: [],
+                templateForm: {
+                    id: null,
+                    name: '',
+                    fileType: '',
+                    template: ''
+                }
+            }
+        },
+        computed: {
+            templateData() {
+                if (this.templateType === 'default') {
+                    return this.defaultTemplateData
+                }
+                return this.customTemplateData
+            },
+            customerTemplateVariable() {
+                const obj = {}
+                this.customerVariable.forEach(item => {
+                    obj[item.variableName] = item.variableValue
+                })
+                return obj
+            }
+        },
+        watch: {
+            customerVariable: {//深度监听，可监听到对象、数组的变化
+                handler(value) {
+                    console.log(12)
+                    window.localStorage.setItem('customerVariable', JSON.stringify(value))
+                },
+                deep: true //true 深度监听
+            },
+            'templateForm.fileType': {
+                handler(value) {
+                    if (value) {
+                        previewCodeEditor.setOption('mode', modeMap[value])
+                    }
+                },
+                deep: true //true 深度监听
+            }
+        },
+        methods: {
+            addVariable() {
+                this.customerVariable.push({
+                    variableName: '',
+                    variableValue: ''
+                })
+            },
+            deleteVariable(index) {
+                console.log(index)
+                this.customerVariable.splice(index, 1)
+                this.customerVariable = JSON.parse(JSON.stringify(this.customerVariable))
+            },
+            getTemplate() {
+                fetch('/code/template/list', {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }).then(response => {
+                    return response.json()
+                }).then(res => {
+                    console.log(res)
+                    this.customTemplateData = res.data
+                }).catch(error => {
+                    console.error(error)
+                })
+            },
+            getDefaultTemplate() {
+                fetch('/code/template/default-list', {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }).then(response => {
+                    return response.json()
+                }).then(res => {
+                    console.log(res)
+                    this.defaultTemplateData = res.data
+                }).catch(error => {
+                    console.error(error)
+                })
+            },
+            formatCode() {
+                codeEditor.setValue(sqlFormatter.format(codeEditor.getValue()))
+            },
+            async check() {
+                let response = await fetch('/code/check-sql', {
+                    method: "POST",
+                    body: JSON.stringify({
+                        sql: codeEditor.getValue()
+                    }),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+                let res = response.json()
+                return new Promise(((resolve) => {
+                    resolve(res)
+                }))
+            },
+            preview() {
+                fetch('/code/preview', {
+                    method: "POST",
+                    body: JSON.stringify({
+                        sql: codeEditor.getValue(),
+                        template: {
+                            template: templateCodeEditor.getValue(),
+                            fileType: 'java'
+                        },
+                        customerTemplateVariable: this.customerTemplateVariable
+                    }),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }).then(response => {
+                    return response.json()
+                }).then(res => {
+                    if (res.data.content) {
+                        previewCodeEditor.setValue(res.data.content)
+                    }
+                }).catch(error => {
+                    console.error(error)
+                })
+            },
+            async submit() {
+                this.submitLoading = true
+                let response
+                if (this.templateForm.id) {
+                    response = await fetch('/code/template/' + this.templateForm.id, {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            template: templateCodeEditor.getValue(),
+                            templateName: this.templateForm.name,
+                            fileType: this.templateForm.fileType
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    })
+                } else {
+                    response = await fetch('/code/template', {
+                        method: "POST",
+                        body: JSON.stringify({
+                            template: templateCodeEditor.getValue(),
+                            templateName: this.templateForm.name,
+                            fileType: this.templateForm.fileType
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    })
+                }
+
+                this.submitLoading = false
+                response.json().then(res => {
+                    if (res.status === 200) {
+                        this.getTemplate()
+                        this.getDefaultTemplate()
+                        this.modalShow = false
+                    }
+                })
+            },
+            addTemplate() {
+                this.modalShow = !this.modalShow
+                this.templateForm.id = null
+            },
+            edit(record) {
+                this.modalShow = true
+                this.templateForm = {
+                    id: record.id,
+                    name: record.templateName,
+                    fileType: record.fileType,
+                    template: record.template
+                }
+                templateCodeEditor.setValue(record.template)
+                previewCodeEditor.setOption('mode', modeMap[record.fileType])
+            },
+            remove(record) {
+                console.log(record)
+                this.$confirm({
+                    title: '提示',
+                    content: '确认删除' + record.templateName + '?',
+                    okText: '确认',
+                    cancelText: '取消',
+                    onOk: () => {
+                        fetch('/code/template/' + record.id, {
+                            method: "DELETE",
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        }).then(response => {
+                            return response.json()
+                        }).then(res => {
+                            console.log(res)
+                            this.getTemplate()
+                        }).catch(error => {
+                            console.error(error)
+                        })
+                    }
+                });
+            },
+            templateSelect(record) {
+                if (this.templateType === 'default') {
+                    const templateData = this.defaultTemplateData
+                    const data = templateData.filter(item => item.id === record.id)
+                    data[0].selected = !record.selected
+                    this.defaultTemplateData = JSON.parse(JSON.stringify(templateData))
+                } else {
+                    const templateData = this.customTemplateData
+                    const data = templateData.filter(item => item.id === record.id)
+                    data[0].selected = !record.selected
+                    this.customTemplateData = JSON.parse(JSON.stringify(templateData))
+                }
+
+            },
+            async generate() {
+                //检验sql
+                let res = await this.check()
+                if (res.status !== 200) {
+                    this.sqlError = res.msg
+                    return
+                }
+                const defaultData = this.defaultTemplateData.filter(item => !!item.selected)
+                const customData = this.customTemplateData.filter(item => !!item.selected)
+                const data = defaultData.concat(customData)
+                const response = await fetch('/code/generate', {
+                    method: "POST",
+                    body: JSON.stringify({
+                        sql: this.sqlValue,
+                        templateList: data,
+                        customerTemplateVariable: this.customerTemplateVariable
+                    }),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+                const filename = response.headers.get('content-disposition').split(';')[1].split('=')[1]
+                const blob = await response.blob()
+
+                const link = document.createElement('a')
+                link.download = decodeURIComponent(filename)
+                link.style.display = 'none'
+                link.href = URL.createObjectURL(blob)
+                document.body.appendChild(link)
+                link.click()
+                URL.revokeObjectURL(link.href)
+                document.body.removeChild(link)
+            }
+        },
+        mounted() {
+            this.fileTypeData = Object.keys(modeMap)
+            //读取自定义变量缓存
+            if (window.localStorage.getItem("customerVariable")) {
+                this.customerVariable = JSON.parse(window.localStorage.getItem("customerVariable"))
+            } else {
+                console.log(11)
+                this.customerVariable = [{
+                    variableName: 'package',
+                    variableValue: 'com.tt',
+                }, {
+                    variableName: 'module',
+                    variableValue: 'system',
+                }]
+            }
+            this.getTemplate()
+            this.getDefaultTemplate()
+            codeEditor = CodeMirror.fromTextArea(document.getElementById("code"), {
+                mode: "text/x-mysql",
+                styleActiveLine: true,
+                lineNumbers: true,
+                lineWrapping: true,
+                theme: 'ayu-dark'
+            });
+            if (window.localStorage.getItem("sql")) {
+                codeEditor.setValue(window.localStorage.getItem("sql"))
+            }
+            this.sqlValue = window.localStorage.getItem("sql")
+            codeEditor.on('change', instance => {
+                this.sqlValue = instance.getValue()
+                window.localStorage.setItem("sql", instance.getValue())
+            })
+            templateCodeEditor = CodeMirror.fromTextArea(document.getElementById("template"), {
+                mode: "text/velocity",
+                styleActiveLine: true,
+                lineNumbers: true,
+                lineWrapping: true,
+                theme: 'ayu-dark'
+            });
+            templateCodeEditor.on('change', instance => {
+                this.templateForm.template = instance.getValue()
+                this.preview()
+            })
+            previewCodeEditor = CodeMirror.fromTextArea(document.getElementById("preview"), {
+                mode: "text/x-java",
+                styleActiveLine: true,
+                lineNumbers: true,
+                lineWrapping: true,
+                readOnly: true,
+                theme: 'ayu-dark'
+            });
+        }
+    })
+    app.use(antd)
+    app.mount("#root")
+</script>
+</html>
