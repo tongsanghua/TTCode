@@ -110,7 +110,7 @@
                     <template class="ant-card-actions" v-slot:actions>
                         <a-button type="link" @click="edit(template)">查看</a-button>
                         <!--                    <a-button type="link" :disabled="sqlValue===''">预览</a-button>-->
-                        <a-button type="link" @click="remove(template)"><span style="color: red">删除</span></a-button>
+                        <a-button type="link" :disabled="templateType==='default'" @click="remove(template)"><span style="color: red">删除</span></a-button>
                     </template>
                 </a-card>
             </div>
