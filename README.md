@@ -12,7 +12,7 @@ TTCode是基于SpringBoot开发的代码生成小程序。此小程序并非微�
 直接引用依赖(正在发布)
 ```xml
 <dependency>
-    <groupId>com.tt</groupId>
+    <groupId>com.github.tt</groupId>
     <artifactId>TTCode</artifactId>
     <version>1.0.0</version>
 </dependency>
