@@ -52,7 +52,7 @@ public class CodeServiceImpl implements CodeService {
                         SQLColumnDefinition sqlColumnDefinition = (SQLColumnDefinition) item;
                         MetaColumn metaColumn = MetaColumn.builder()
                                 .columnName(sqlColumnDefinition.getName().toString().replace("`", ""))
-                                .columnType(sqlColumnDefinition.getDataType().toString().replaceAll("\\(.*\\)", ""))
+                                .columnType(sqlColumnDefinition.getDataType().getName())
                                 .columnComment(sqlColumnDefinition.getComment() != null ? sqlColumnDefinition.getComment().toString().replace("'", "") : "")
                                 .build();
                         metaColumnList.add(metaColumn);
