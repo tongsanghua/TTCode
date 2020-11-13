@@ -7,16 +7,8 @@ TTCode是基于SpringBoot开发的代码生成小程序。此小程序并非微�
 #### 单独部署：
 - [体验](http://118.126.105.207:8080/code.html)
 
-#### 小程序方式：
-##### Maven
-直接引用依赖(正在发布)
-```xml
-<dependency>
-    <groupId>com.github.tt</groupId>
-    <artifactId>TTCode</artifactId>
-    <version>1.0.0</version>
-</dependency>
-```
+#### 小程序方式
+
 ##### 作为module引入自己的项目
 
 修改pom.xml,删除spring-boot-maven-plugin插件配置
