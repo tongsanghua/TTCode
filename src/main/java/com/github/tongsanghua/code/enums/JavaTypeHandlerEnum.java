@@ -7,6 +7,7 @@ public enum JavaTypeHandlerEnum {
     TEXT("TEXT", "String"),
     LONGVARCHAR("LONGVARCHAR", "String"),
     MEDIUMTEXT("MEDIUMTEXT", "String"),
+    LONGTEXT("LONGTEXT", "String"),
     NUMERIC("NUMERIC", "BigDecimal"),
     DECIMAL("DECIMAL", "BigDecimal"),
     BIT("BIT", "Boolean"),
